@@ -24,6 +24,9 @@ def check_bound(obj_rct: pg.Rect) -> tuple[bool, bool]:
         tate = False
     return yoko, tate
 
+def remove_object(obj, lst):
+    if obj in lst:
+        lst.remove(obj)
 
 class Bird:
     """
@@ -170,6 +173,35 @@ class Score:
         """
         screen.blit(self.img, self.rct)
 
+class Explosion:
+    """
+    爆発エフェクトを表すクラス
+    """
+    def __init__(self, center: tuple[int, int], life: int = 30):
+        """
+        爆発エフェクトの初期化
+        引数 center: 爆発エフェクトの中心座標
+        引数 life: 爆発エフェクトの寿命（フレーム数）
+        """
+        self.imgs = [  # 上下反転した2種類のSurface
+            pg.image.load(f"fig/explosion.gif"),
+            pg.transform.flip(pg.image.load(f"fig/explosion.gif"), True, False),
+        ]
+        self.rct = self.imgs[0].get_rect()
+        self.rct.center = center
+        self.life = life
+        self.frame = 0
+
+    def update(self, screen: pg.Surface):
+        """
+        爆発エフェクトの更新と描画
+        引数 screen: 画面Surface
+        """
+        screen.blit(self.imgs[self.frame % 2], self.rct)  # 画像を交互に表示
+        self.frame += 1
+        self.life -= 1
+
+
 
 def main():
     pg.display.set_caption("たたかえ！こうかとん")
@@ -182,6 +214,7 @@ def main():
     # bomb2 = Bomb((0, 0, 255), 20)   
     bombs = [Bomb((255, 0, 0), 10) for _ in range(NUM_OF_BOMBS)] 
     beams = []
+    explosions = []
     clock = pg.time.Clock()
     tmr = 0
     while True:
@@ -201,12 +234,13 @@ def main():
                 time.sleep(1)
                 return
 
+
         # 爆弾とビームの衝突判定
         for bomb in bombs[:]:
             for beam in beams[:]:
                 if beam.rct.colliderect(bomb.rct):  # 衝突時の処理
-                    beams.remove(beam)  # ビームを削除
-                    bombs.remove(bomb)  # 爆弾を削除
+                    remove_object(beam, beams)
+                    remove_object(bomb, bombs)
                     bird.change_img(6, screen)
                     score.add_score(1)
                     pg.display.update()
@@ -227,6 +261,13 @@ def main():
         # 爆弾の更新
         for bomb in bombs:
             bomb.update(screen)
+
+        # 爆発エフェクトの更新と寿命切れの削除
+        for explosion in explosions[:]:
+            explosion.update(screen)
+            if explosion.life <= 0:
+                explosions.remove(explosion)
+
 
         score.update(screen)
         pg.display.update()
